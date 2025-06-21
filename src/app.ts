@@ -40,7 +40,8 @@ app.use('/public', express.static(path.join(__dirname, '../public')));
 
 // Health check route
 app.get('/health', (_, res) => {
-  res.status(200).json({ status: 'OK', message: 'Server is running' });
+  console.log('Health check endpoint hit');
+  res.status(200).json({ status: 'OK', message: 'Server is running', timestamp: new Date().toISOString() });
 });
 
 // Routes
@@ -66,8 +67,14 @@ app.use((err: any, _: express.Request, res: express.Response, __: express.NextFu
 });
 
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
+  console.log('Health endpoint available at /health');
+});
+
+// Handle server errors
+server.on('error', (error) => {
+  console.error('Server error:', error);
 });
 
 export default app;
