@@ -1,7 +1,6 @@
 // File: backend/src/index.ts
 import dotenv from 'dotenv';
 import path from 'path';
-import fs from 'fs';
 
 // Load environment variables first
 dotenv.config({ path: path.join(__dirname, '../.env') });
@@ -53,8 +52,8 @@ const io = new Server(server, {
   },
 });
 
-// Serve static files
-app.use('/audio', express.static(path.join(__dirname, '..', 'public', 'audio')));
+// Serve static files (keeping for other assets)
+app.use('/public', express.static(path.join(__dirname, '..', 'public')));
 
 // Health check route
 app.get('/health', (_, res) => {
@@ -166,27 +165,25 @@ io.on('connection', (socket) => {
         input: aiResponse,
       });
 
-      // Save audio file
-      const audioFileName = `response-${Date.now()}.mp3`;
-      const audioPath = path.join(__dirname, '..', 'public', 'audio', audioFileName);
+      // Convert audio to base64 for streaming
       const audioBuffer = Buffer.from(await speech.arrayBuffer());
-      await fs.promises.writeFile(audioPath, audioBuffer);
+      const audioBase64 = audioBuffer.toString('base64');
 
-      // Add AI response to conversation
+      // Add AI response to conversation (without audioUrl since we're streaming)
       const aiMessage = {
         role: 'assistant' as const,
         content: aiResponse,
         timestamp: new Date(),
-        audioUrl: `/audio/${audioFileName}`,
       };
       conversation.messages.push(aiMessage);
 
       await conversation.save();
 
-      // Emit the AI response with demo agent info if in call simulator mode
+      // Emit the AI response with base64 audio data
       socket.emit('ai_response', {
         message: aiResponse,
-        audioUrl: `/audio/${audioFileName}`,
+        audioData: audioBase64,
+        audioType: 'audio/mpeg',
         ...(data.isCallSimulator && {
           demoAgent: {
             name: demoAgent.name,
@@ -266,17 +263,12 @@ io.on('connection', (socket) => {
         input: welcomeMessage.content,
       });
 
-      // Save audio file
-      const audioFileName = `welcome-${Date.now()}.mp3`;
-      const audioPath = path.join(__dirname, '..', 'public', 'audio', audioFileName);
+      // Convert audio to base64 for streaming
       const audioBuffer = Buffer.from(await speech.arrayBuffer());
-      await fs.promises.writeFile(audioPath, audioBuffer);
-
-      // Add audio URL to welcome message
-      welcomeMessage.audioUrl = `/audio/${audioFileName}`;
+      const audioBase64 = audioBuffer.toString('base64');
 
       // Generate a descriptive title for the demo call
-      let conversationTitle;
+      let conversationTitle: string;
       if (isCallSimulator) {
         // For demo calls, generate a title based on the conversation content
         const titleResponse = await openai.chat.completions.create({
@@ -333,7 +325,11 @@ io.on('connection', (socket) => {
       // Emit conversation started event
       socket.emit('conversation_started', {
         conversationId: conversation._id,
-        welcomeMessage,
+        welcomeMessage: {
+          ...welcomeMessage,
+          audioData: audioBase64,
+          audioType: 'audio/mpeg',
+        },
         ...(isCallSimulator && {
           demoAgent: {
             name: demoAgent.name,
