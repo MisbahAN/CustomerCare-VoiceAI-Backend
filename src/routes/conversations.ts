@@ -121,6 +121,15 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
+    // Auto-analyze sentiment if not already set and there are user messages
+    const userMessages = conversation.messages.filter(msg => msg.role === 'user');
+    if (!conversation.metadata.sentiment && userMessages.length > 0) {
+      const sentiment = await analyzeSentiment(conversation.messages);
+      conversation.metadata.sentiment = sentiment;
+      conversation.metadata.updated = new Date();
+      await conversation.save();
+    }
+
     // Convert the conversation to a plain object first
     const conversationObj = conversation.toObject();
 
@@ -726,7 +735,7 @@ Examples:
   }
 }
 
-// Update conversation route to include title generation
+// Update conversation route to include title generation and sentiment analysis
 router.put('/:id/end', async (req, res) => {
   try {
     const conversation = await Conversation.findById(req.params.id);
@@ -737,8 +746,16 @@ router.put('/:id/end', async (req, res) => {
     // Generate title based on conversation content
     const title = await generateConversationTitle(conversation.messages);
     
-    // Update conversation with generated title
+    // Analyze sentiment if there are user messages
+    const userMessages = conversation.messages.filter(msg => msg.role === 'user');
+    if (userMessages.length > 0) {
+      const sentiment = await analyzeSentiment(conversation.messages);
+      conversation.metadata.sentiment = sentiment;
+    }
+    
+    // Update conversation with generated title and sentiment
     conversation.title = title;
+    conversation.metadata.updated = new Date();
     await conversation.save();
 
     return res.json(conversation);
