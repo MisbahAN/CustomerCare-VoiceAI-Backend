@@ -775,7 +775,7 @@ router.put('/:id/update-title', async (req, res) => {
 });
 
 // Reanalyze sentiment for all conversations
-router.post('/reanalyze-sentiment', async (req, res) => {
+router.post('/reanalyze-sentiment', async (_req, res) => {
   try {
     const conversations = await Conversation.find({});
     let updatedCount = 0;
