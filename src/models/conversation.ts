@@ -34,7 +34,7 @@ const ConversationSchema: Schema = new Schema({
   }],
   metadata: {
     duration: { type: Number, default: 0 },
-    sentiment: { type: String, default: 'neutral' },
+    sentiment: { type: String },
     intents: [{ type: String }],
     created: { type: Date, default: Date.now },
     updated: { type: Date, default: Date.now }

@@ -147,7 +147,7 @@ router.get('/:id', async (req, res) => {
           ? conversationObj.metadata.updated.toISOString() 
           : conversationObj.metadata.updated,
         duration: conversationObj.metadata.duration || 0,
-        sentiment: conversationObj.metadata.sentiment || 'neutral'
+        sentiment: conversationObj.metadata.sentiment || 'pending'
       }
     };
 
@@ -236,7 +236,6 @@ router.post('/', async (req, res) => {
         messages: [systemMessage, welcomeMessageWithAudio],
         metadata: {
           duration: 0,
-          sentiment: 'neutral',
           intents: [],
           created: new Date(),
           updated: new Date()
@@ -325,7 +324,6 @@ Maintain a natural flow of conversation as if chatting with a friend while being
       messages: [systemMessage, welcomeMessage],
       metadata: {
         duration: 0,
-        sentiment: 'neutral',
         intents: [],
         created: new Date(),
         updated: new Date()
@@ -773,6 +771,41 @@ router.put('/:id/update-title', async (req, res) => {
   } catch (error) {
     console.error('Error updating conversation title:', error);
     return res.status(500).json({ error: 'Failed to update conversation title' });
+  }
+});
+
+// Reanalyze sentiment for all conversations
+router.post('/reanalyze-sentiment', async (req, res) => {
+  try {
+    const conversations = await Conversation.find({});
+    let updatedCount = 0;
+
+    for (const conversation of conversations) {
+      // Only reanalyze if there are user messages
+      const userMessages = conversation.messages.filter(msg => msg.role === 'user');
+      
+      if (userMessages.length > 0) {
+        const newSentiment = await analyzeSentiment(conversation.messages);
+        
+        // Only update if sentiment actually changed
+        if (conversation.metadata.sentiment !== newSentiment) {
+          conversation.metadata.sentiment = newSentiment;
+          conversation.metadata.updated = new Date();
+          await conversation.save();
+          updatedCount++;
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Reanalyzed sentiment for ${updatedCount} conversations`,
+      totalConversations: conversations.length,
+      updatedConversations: updatedCount
+    });
+  } catch (error) {
+    console.error('Error reanalyzing sentiment:', error);
+    res.status(500).json({ error: 'Failed to reanalyze sentiment' });
   }
 });
 

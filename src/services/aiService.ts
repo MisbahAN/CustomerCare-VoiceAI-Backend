@@ -190,7 +190,7 @@ const analyzeSentiment = async (messages: IMessage[]): Promise<string> => {
     return completion.choices[0].message?.content?.toLowerCase() || 'neutral';
   } catch (error) {
     console.error('Error analyzing sentiment:', error);
-    return 'neutral';
+    return 'pending';
   }
 };
 
@@ -297,7 +297,7 @@ export const processMessage = async (
       message:
         "I apologize, but I encountered an error processing your request. Please let me know if you'd like me to try again.",
       processingTime: 0,
-      sentiment: 'neutral',
+      sentiment: 'pending',
       title: 'New Conversation',
       intents: ['error'],
       company: 'general',
