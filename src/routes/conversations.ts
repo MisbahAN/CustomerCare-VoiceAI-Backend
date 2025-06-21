@@ -540,7 +540,7 @@ router.post('/:conversationId/messages', async (req, res) => {
     }
 
     // Update conversation duration and timestamp
-    conversation.metadata.duration = Math.round((Date.now() - conversation.metadata.created.getTime()) / 1000);
+    conversation.metadata.duration = calculateConversationDuration(conversation.messages);
     conversation.metadata.updated = now;
 
     // Get conversation context (last few messages)
@@ -756,6 +756,9 @@ router.put('/:id/end', async (req, res) => {
     if (userMessages.length > 0) {
       const sentiment = await analyzeSentiment(conversation.messages);
       conversation.metadata.sentiment = sentiment;
+      
+      // Calculate final conversation duration
+      conversation.metadata.duration = calculateConversationDuration(conversation.messages);
     }
     
     // Update conversation with generated title and sentiment
@@ -796,7 +799,19 @@ router.put('/:id/update-title', async (req, res) => {
   }
 });
 
-// Reanalyze sentiment for all conversations
+// Helper function to calculate conversation duration
+const calculateConversationDuration = (messages: any[]): number => {
+  const userMessages = messages.filter(msg => msg.role === 'user');
+  if (userMessages.length === 0) return 0;
+  
+  const firstMessage = userMessages[0];
+  const lastMessage = messages[messages.length - 1];
+  const firstTime = new Date(firstMessage.timestamp).getTime();
+  const lastTime = new Date(lastMessage.timestamp).getTime();
+  return Math.round((lastTime - firstTime) / 1000);
+};
+
+// Reanalyze sentiment and fix duration for all conversations
 router.post('/reanalyze-sentiment', async (_req, res) => {
   try {
     const conversations = await Conversation.find({});
@@ -808,10 +823,12 @@ router.post('/reanalyze-sentiment', async (_req, res) => {
       
       if (userMessages.length > 0) {
         const newSentiment = await analyzeSentiment(conversation.messages);
+        const newDuration = calculateConversationDuration(conversation.messages);
         
-        // Only update if sentiment actually changed
-        if (conversation.metadata.sentiment !== newSentiment) {
+        // Update if sentiment or duration changed
+        if (conversation.metadata.sentiment !== newSentiment || conversation.metadata.duration !== newDuration) {
           conversation.metadata.sentiment = newSentiment;
+          conversation.metadata.duration = newDuration;
           conversation.metadata.updated = new Date();
           await conversation.save();
           updatedCount++;
@@ -821,7 +838,7 @@ router.post('/reanalyze-sentiment', async (_req, res) => {
 
     res.json({
       success: true,
-      message: `Reanalyzed sentiment for ${updatedCount} conversations`,
+      message: `Reanalyzed sentiment and fixed duration for ${updatedCount} conversations`,
       totalConversations: conversations.length,
       updatedConversations: updatedCount
     });

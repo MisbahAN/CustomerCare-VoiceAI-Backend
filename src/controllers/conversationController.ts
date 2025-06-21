@@ -84,7 +84,16 @@ export const addMessage = async (req: IUserRequest, res: Response) => {
     });
     
     conversation.metadata.updated = new Date();
-    conversation.metadata.duration += aiResponse.processingTime || 0;
+    
+    // Calculate actual conversation duration from first user message to last message
+    const userMessages = conversation.messages.filter(msg => msg.role === 'user');
+    if (userMessages.length > 0) {
+      const firstMessage = userMessages[0];
+      const lastMessage = conversation.messages[conversation.messages.length - 1];
+      const firstTime = new Date(firstMessage.timestamp).getTime();
+      const lastTime = new Date(lastMessage.timestamp).getTime();
+      conversation.metadata.duration = Math.round((lastTime - firstTime) / 1000);
+    }
     if (aiResponse.sentiment) {
       conversation.metadata.sentiment = aiResponse.sentiment;
     }
