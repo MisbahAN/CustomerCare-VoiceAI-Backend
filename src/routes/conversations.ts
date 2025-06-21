@@ -7,6 +7,7 @@ import fs from 'fs';
 import { Types } from 'mongoose';
 import dotenv from 'dotenv';
 import { demoAgent } from '../config/demoAgent';
+import { auth, IUserRequest } from '../middleware/auth';
 
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../../.env') });
@@ -99,27 +100,55 @@ Keep the conversation flowing naturally while being genuinely helpful.`
   }
 };
 
-// Get all conversations
-router.get('/', async (req, res) => {
+// Get all conversations for authenticated user
+router.get('/', auth, async (req: IUserRequest, res): Promise<void> => {
   try {
     const { agentId } = req.query;
-    const query = agentId ? { agentId: new Types.ObjectId(agentId as string) } : {};
+    
+    if (!req.user?._id) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    console.log(`🔍 Fetching conversations for user: ${req.user._id}`);
+
+    // Build query with user filtering
+    const query: any = { userId: req.user._id };
+    if (agentId) {
+      query.agentId = new Types.ObjectId(agentId as string);
+    }
     
     const conversations = await Conversation.find(query).sort({ 'metadata.created': -1 });
+    
+    console.log(`✅ Found ${conversations.length} conversations for user ${req.user._id}`);
+    
     res.json(conversations);
   } catch (error) {
-    console.error('Error fetching conversations:', error);
+    console.error('❌ Error fetching conversations:', error);
     res.status(500).json({ error: 'Failed to fetch conversations' });
   }
 });
 
 // Get a single conversation by ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', auth, async (req: IUserRequest, res) => {
   try {
-    const conversation = await Conversation.findById(req.params.id);
+    if (!req.user?._id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    console.log(`🔍 User ${req.user._id} requesting conversation: ${req.params.id}`);
+
+    const conversation = await Conversation.findOne({
+      _id: req.params.id,
+      userId: req.user._id
+    });
+    
     if (!conversation) {
+      console.log(`❌ Conversation ${req.params.id} not found or unauthorized for user ${req.user._id}`);
       return res.status(404).json({ error: 'Conversation not found' });
     }
+
+    console.log(`✅ Found conversation ${req.params.id} for user ${req.user._id}`);
 
     // Auto-analyze sentiment if not already set and there are user messages
     const userMessages = conversation.messages.filter(msg => msg.role === 'user');
@@ -199,9 +228,16 @@ const detectCompanyFromMessages = (messages: IMessage[]): string => {
 // };
 
 // Create new conversation
-router.post('/', async (req, res) => {
+router.post('/', auth, async (req: IUserRequest, res) => {
   try {
-    const { userId, agentId, isCallSimulator } = req.body;
+    if (!req.user?._id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const { agentId, isCallSimulator } = req.body;
+    const userId = req.user._id; // Use authenticated user's ID
+
+    console.log(`🔍 Creating conversation for user: ${userId}`);
     
     // For call simulator, use demo agent
     if (isCallSimulator) {
@@ -355,12 +391,25 @@ Maintain a natural flow of conversation as if chatting with a friend while being
 });
 
 // Delete a conversation
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', auth, async (req: IUserRequest, res) => {
   try {
-    const conversation = await Conversation.findByIdAndDelete(req.params.id);
+    if (!req.user?._id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    console.log(`🔍 User ${req.user._id} attempting to delete conversation: ${req.params.id}`);
+
+    const conversation = await Conversation.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user._id
+    });
+    
     if (!conversation) {
+      console.log(`❌ Conversation ${req.params.id} not found or unauthorized for user ${req.user._id}`);
       return res.status(404).json({ error: 'Conversation not found' });
     }
+
+    console.log(`✅ Deleted conversation ${req.params.id} for user ${req.user._id}`);
     
     // Delete associated audio files
     conversation.messages.forEach(message => {
@@ -380,12 +429,20 @@ router.delete('/:id', async (req, res) => {
 });
 
 // Handle audio messages
-router.post('/:conversationId/audio', upload.single('audio'), async (req, res) => {
+router.post('/:conversationId/audio', auth, upload.single('audio'), async (req: IUserRequest, res) => {
   try {
+    if (!req.user?._id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
     const { conversationId } = req.params;
     const { transcript } = req.body;
 
-    const conversation = await Conversation.findById(conversationId);
+    const conversation = await Conversation.findOne({
+      _id: conversationId,
+      userId: req.user._id
+    });
+    
     if (!conversation) {
       return res.status(404).json({ error: 'Conversation not found' });
     }
@@ -452,12 +509,21 @@ For example, instead of "You'll need to contact our support team", say "I can he
 });
 
 // Get conversation messages
-router.get('/:id/messages', async (req, res) => {
+router.get('/:id/messages', auth, async (req: IUserRequest, res) => {
   try {
-    const conversation = await Conversation.findById(req.params.id);
+    if (!req.user?._id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const conversation = await Conversation.findOne({
+      _id: req.params.id,
+      userId: req.user._id
+    });
+    
     if (!conversation) {
       return res.status(404).json({ message: 'Conversation not found' });
     }
+    
     const messages = conversation.messages;
     return res.json(messages);
   } catch (error) {
@@ -510,12 +576,20 @@ Respond with exactly one word:
 };
 
 // Update the POST route to use the new sentiment analysis
-router.post('/:conversationId/messages', async (req, res) => {
+router.post('/:conversationId/messages', auth, async (req: IUserRequest, res) => {
   try {
+    if (!req.user?._id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
     const { conversationId } = req.params;
     const { content, role } = req.body;
 
-    const conversation = await Conversation.findById(conversationId);
+    const conversation = await Conversation.findOne({
+      _id: conversationId,
+      userId: req.user._id
+    });
+    
     if (!conversation) {
       return res.status(404).json({ error: 'Conversation not found' });
     }
@@ -643,9 +717,22 @@ Example formats:
 });
 
 // Get user stats
-router.get('/stats/user/:userId', async (req, res) => {
+router.get('/stats/user/:userId', auth, async (req: IUserRequest, res): Promise<void> => {
   try {
-    const conversations = await Conversation.find({ userId: req.params.userId });
+    if (!req.user?._id) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    // Ensure user can only access their own stats
+    if (req.params.userId !== req.user._id.toString()) {
+      res.status(403).json({ error: 'Unauthorized to access other user stats' });
+      return;
+    }
+
+    console.log(`🔍 Fetching stats for user: ${req.user._id}`);
+
+    const conversations = await Conversation.find({ userId: req.user._id });
     
     const stats = {
       totalCalls: conversations.length,
@@ -743,9 +830,17 @@ Examples:
 }
 
 // Update conversation route to include title generation and sentiment analysis
-router.put('/:id/end', async (req, res) => {
+router.put('/:id/end', auth, async (req: IUserRequest, res) => {
   try {
-    const conversation = await Conversation.findById(req.params.id);
+    if (!req.user?._id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const conversation = await Conversation.findOne({
+      _id: req.params.id,
+      userId: req.user._id
+    });
+    
     if (!conversation) {
       return res.status(404).json({ error: 'Conversation not found' });
     }
@@ -776,9 +871,17 @@ router.put('/:id/end', async (req, res) => {
 });
 
 // Update conversation title based on content
-router.put('/:id/update-title', async (req, res) => {
+router.put('/:id/update-title', auth, async (req: IUserRequest, res) => {
   try {
-    const conversation = await Conversation.findById(req.params.id);
+    if (!req.user?._id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const conversation = await Conversation.findOne({
+      _id: req.params.id,
+      userId: req.user._id
+    });
+    
     if (!conversation) {
       return res.status(404).json({ error: 'Conversation not found' });
     }
@@ -814,9 +917,16 @@ const calculateConversationDuration = (messages: any[]): number => {
 };
 
 // Reanalyze sentiment and fix duration for all conversations
-router.post('/reanalyze-sentiment', async (_req, res) => {
+router.post('/reanalyze-sentiment', auth, async (req: IUserRequest, res): Promise<void> => {
   try {
-    const conversations = await Conversation.find({});
+    if (!req.user?._id) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    console.log(`🔍 Reanalyzing sentiment for user: ${req.user._id}`);
+
+    const conversations = await Conversation.find({ userId: req.user._id });
     let updatedCount = 0;
 
     for (const conversation of conversations) {
