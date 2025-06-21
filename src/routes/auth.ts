@@ -1,26 +1,36 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/user';
+import { validateRegistration, validateLogin, sanitizeInput } from '../middleware/validation';
 
 const router = express.Router();
 
 // Register route
-router.post('/register', async (req, res) => {
+router.post('/register', sanitizeInput, validateRegistration, async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
+    // Input validation is handled by middleware
+
+    console.log(`🔍 Attempting to register user: ${email}`);
+
     // Check if user already exists
-    let user = await User.findOne({ email });
-    if (user) {
-      return res.status(400).json({ message: 'User already exists' });
+    let existingUser = await User.findOne({ email });
+    if (existingUser) {
+      console.log(`❌ Registration failed: User ${email} already exists`);
+      return res.status(400).json({ message: 'User already exists with this email' });
     }
 
-    // Create new user
-    user = await User.create({
+    console.log(`✅ Email ${email} is available, creating new user...`);
+
+    // Create new user (input is already sanitized by middleware)
+    const user = await User.create({
       name,
       email,
       password
     });
+
+    console.log(`✅ User created successfully: ${user._id}`);
 
     // Create JWT token
     const token = jwt.sign(
@@ -28,6 +38,8 @@ router.post('/register', async (req, res) => {
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
+
+    console.log(`✅ Registration completed for user: ${email}`);
 
     return res.status(201).json({
       token,
@@ -38,14 +50,38 @@ router.post('/register', async (req, res) => {
         role: user.role
       }
     });
-  } catch (error) {
-    console.error('Register error:', error);
-    return res.status(500).json({ message: 'Server error during registration' });
+  } catch (error: any) {
+    console.error('🚨 Register error:', error);
+    
+    // Handle specific MongoDB errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map((err: any) => err.message);
+      console.log('❌ Validation errors:', validationErrors);
+      return res.status(400).json({ 
+        message: 'Validation failed', 
+        errors: validationErrors 
+      });
+    }
+    
+    if (error.code === 11000) {
+      console.log('❌ Duplicate key error - user already exists');
+      return res.status(400).json({ message: 'User already exists with this email' });
+    }
+
+    if (error.name === 'MongoNetworkError' || error.name === 'MongoServerSelectionError') {
+      console.log('❌ Database connection error during registration');
+      return res.status(503).json({ message: 'Database temporarily unavailable. Please try again.' });
+    }
+
+    return res.status(500).json({ 
+      message: 'Server error during registration',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
 // Login route
-router.post('/login', async (req, res) => {
+router.post('/login', sanitizeInput, validateLogin, async (req, res) => {
   try {
     const { email, password } = req.body;
 

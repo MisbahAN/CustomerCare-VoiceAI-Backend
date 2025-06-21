@@ -40,8 +40,14 @@ app.use('/public', express.static(path.join(__dirname, '../public')));
 
 // Health check route
 app.get('/health', (_, res) => {
-  console.log('Health check endpoint hit');
-  res.status(200).json({ status: 'OK', message: 'Server is running', timestamp: new Date().toISOString() });
+  console.log('🔍 Health check endpoint hit');
+  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'Server is running', 
+    database: dbStatus,
+    timestamp: new Date().toISOString() 
+  });
 });
 
 // Routes
@@ -50,15 +56,58 @@ app.use('/api/conversations', conversationRoutes);
 app.use('/api/company-agents', companyAgentRoutes);
 app.use('/api/livekit', livekitRoutes);
 
-// Connect to MongoDB
-mongoose
-  .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/customercare-voiceai')
-  .then(() => {
-    console.log('Connected to MongoDB');
-  })
-  .catch((error) => {
-    console.error('MongoDB connection error:', error);
-  });
+// MongoDB connection with retry logic
+const connectToMongoDB = async (retries = 5) => {
+  const mongoOptions = {
+    retryWrites: true,
+    w: 'majority' as const,
+    ssl: true,
+    maxPoolSize: 10,
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
+    bufferMaxEntries: 0,
+    bufferCommands: false,
+  };
+
+  for (let i = 0; i < retries; i++) {
+    try {
+      await mongoose.connect(
+        process.env.MONGODB_URI || 'mongodb://localhost:27017/customercare-voiceai',
+        mongoOptions
+      );
+      console.log('✅ Connected to MongoDB successfully');
+      return;
+    } catch (error) {
+      console.error(`❌ MongoDB connection attempt ${i + 1} failed:`, error);
+      
+      if (i === retries - 1) {
+        console.error('🚨 All MongoDB connection attempts failed. Exiting...');
+        process.exit(1);
+      }
+      
+      const delay = Math.min(1000 * Math.pow(2, i), 30000);
+      console.log(`⏳ Retrying connection in ${delay / 1000} seconds...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+};
+
+// Initialize MongoDB connection
+connectToMongoDB();
+
+// Handle MongoDB connection events
+mongoose.connection.on('error', (error) => {
+  console.error('🚨 MongoDB connection error:', error);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('⚠️ MongoDB disconnected. Attempting to reconnect...');
+  connectToMongoDB();
+});
+
+mongoose.connection.on('reconnected', () => {
+  console.log('✅ MongoDB reconnected successfully');
+});
 
 // Error handling middleware
 app.use((err: any, _: express.Request, res: express.Response, __: express.NextFunction) => {
