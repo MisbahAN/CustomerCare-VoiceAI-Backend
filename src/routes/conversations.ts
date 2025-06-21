@@ -200,8 +200,9 @@ router.get('/:id', auth, async (req: IUserRequest, res) => {
 // Helper function to detect company from messages
 const detectCompanyFromMessages = (messages: IMessage[]): string => {
   const messageText = messages.map(msg => msg.content).join(' ').toLowerCase();
-  const companies = ['amazon', 'netflix', 'pizza hut', 'apple'];
-  return companies.find(company => messageText.includes(company)) || 'general';
+  const companies = ['amazon', 'netflix', 'pizza hut', 'apple', 'microsoft', 'google', 'uber', 'airbnb'];
+  const detectedCompany = companies.find(company => messageText.includes(company.toLowerCase()));
+  return detectedCompany || 'general';
 };
 
 // Comment out unused function
@@ -283,6 +284,7 @@ router.post('/', auth, async (req: IUserRequest, res) => {
         messages: [systemMessage, welcomeMessageWithAudio],
         metadata: {
           duration: 0,
+          sentiment: 'neutral',
           intents: [],
           created: new Date(),
           updated: new Date()
@@ -371,6 +373,7 @@ Maintain a natural flow of conversation as if chatting with a friend while being
       messages: [systemMessage, welcomeMessage],
       metadata: {
         duration: 0,
+        sentiment: 'neutral',
         intents: [],
         created: new Date(),
         updated: new Date()
@@ -734,6 +737,8 @@ router.get('/stats/user/:userId', auth, async (req: IUserRequest, res): Promise<
 
     const conversations = await Conversation.find({ userId: req.user._id });
     
+    console.log(`📊 Found ${conversations.length} conversations for stats calculation`);
+    
     const stats = {
       totalCalls: conversations.length,
       averageDuration: 0,
@@ -759,20 +764,34 @@ router.get('/stats/user/:userId', auth, async (req: IUserRequest, res): Promise<
       )[0];
       stats.lastPractice = lastConversation.metadata.updated;
 
+      console.log(`📈 Average duration: ${stats.averageDuration}s, Last practice: ${stats.lastPractice}`);
+
       // Calculate sentiment breakdown and other stats
       conversations.forEach(conv => {
-        const sentiment = conv.metadata.sentiment as keyof typeof stats.sentimentBreakdown;
-        if (sentiment in stats.sentimentBreakdown) {
-          stats.sentimentBreakdown[sentiment]++;
+        // Handle sentiment - default to neutral if missing or invalid
+        let sentiment = conv.metadata.sentiment;
+        if (!sentiment || !['positive', 'negative', 'neutral', 'urgent'].includes(sentiment)) {
+          sentiment = 'neutral';
+          console.log(`⚠️ Invalid sentiment "${conv.metadata.sentiment}" for conversation ${conv._id}, defaulting to neutral`);
         }
-        stats.totalMessages += conv.messages.filter(msg => msg.role !== 'system').length;
+        
+        stats.sentimentBreakdown[sentiment as keyof typeof stats.sentimentBreakdown]++;
+        
+        // Count non-system messages
+        const messageCount = conv.messages.filter(msg => msg.role !== 'system').length;
+        stats.totalMessages += messageCount;
         
         // Detect company from conversation
         const company = detectCompanyFromMessages(conv.messages);
-        if (company) {
+        if (company && company !== 'general') {
           stats.companiesInteractedWith.add(company);
         }
+
+        console.log(`📝 Conversation ${conv._id}: ${messageCount} messages, sentiment: ${sentiment}, company: ${company}`);
       });
+
+      console.log(`📊 Final sentiment breakdown:`, stats.sentimentBreakdown);
+      console.log(`🏢 Companies interacted with:`, Array.from(stats.companiesInteractedWith));
     }
 
     // Convert Set to Array for JSON response
@@ -781,6 +800,7 @@ router.get('/stats/user/:userId', auth, async (req: IUserRequest, res): Promise<
       companiesInteractedWith: Array.from(stats.companiesInteractedWith)
     };
 
+    console.log(`✅ Sending stats response:`, response);
     res.json(response);
   } catch (error) {
     console.error('Error fetching user stats:', error);
