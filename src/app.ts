@@ -14,13 +14,20 @@ const app = express();
 
 // CORS configuration for production
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? [process.env.FRONTEND_URL || 'https://your-frontend-domain.vercel.app']
-    : ['http://localhost:3000', 'http://localhost:3001'],
+  origin: [
+    'http://localhost:3000', 
+    'http://localhost:3001',
+    'https://customer-care-voice-ai-frontend.vercel.app',
+    process.env.FRONTEND_URL
+  ].filter(Boolean),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 };
+
+// Debug CORS configuration
+console.log('CORS Origins:', corsOptions.origin);
+console.log('NODE_ENV:', process.env.NODE_ENV);
 
 // Middleware
 app.use(cors(corsOptions));
