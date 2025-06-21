@@ -1,5 +1,5 @@
-import { Request, Response } from 'express';
-import Conversation, { IConversation } from '../models/conversation';
+import { Response } from 'express';
+import Conversation from '../models/conversation';
 import { processMessage } from '../services/aiService';
 import { IUserRequest } from '../middleware/auth';
 
@@ -46,10 +46,10 @@ export const getConversation = async (req: IUserRequest, res: Response) => {
       return res.status(404).json({ message: 'Conversation not found' });
     }
     
-    res.status(200).json(conversation);
+    return res.status(200).json(conversation);
   } catch (error) {
     console.error('Error fetching conversation:', error);
-    res.status(500).json({ message: 'Error fetching conversation' });
+    return res.status(500).json({ message: 'Error fetching conversation' });
   }
 };
 
@@ -96,13 +96,13 @@ export const addMessage = async (req: IUserRequest, res: Response) => {
     
     await conversation.save();
     
-    res.status(200).json({
+    return res.status(200).json({
       message: aiResponse.message,
       audioUrl: aiResponse.audioUrl,
       conversation: conversation
     });
   } catch (error) {
     console.error('Error processing message:', error);
-    res.status(500).json({ message: 'Error processing message' });
+    return res.status(500).json({ message: 'Error processing message' });
   }
 }; 

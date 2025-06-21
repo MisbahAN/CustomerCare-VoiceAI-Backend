@@ -32,7 +32,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 app.use('/public', express.static(path.join(__dirname, '../public')));
 
 // Health check route
-app.get('/health', (req, res) => {
+app.get('/health', (_, res) => {
   res.status(200).json({ status: 'OK', message: 'Server is running' });
 });
 
@@ -53,7 +53,7 @@ mongoose
   });
 
 // Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, _: express.Request, res: express.Response, __: express.NextFunction) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Something went wrong!' });
 });
