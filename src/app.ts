@@ -19,7 +19,7 @@ const corsOptions = {
     'http://localhost:3001',
     'https://customer-care-voice-ai-frontend.vercel.app',
     process.env.FRONTEND_URL
-  ].filter(Boolean),
+  ].filter((url): url is string => typeof url === 'string' && url.length > 0),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
