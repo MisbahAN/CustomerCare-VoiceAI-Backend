@@ -238,10 +238,12 @@ router.post('/', async (req, res) => {
 
       // Generate a descriptive title for the demo call
       const initialTitle = await generateConversationTitle([systemMessage, welcomeMessageWithAudio]);
+      // Remove any quotation marks from the title
+      const cleanTitle = initialTitle.replace(/[\"']/g, '');
 
       const conversation = await Conversation.create({
         userId,
-        title: initialTitle,
+        title: cleanTitle,
         messages: [systemMessage, welcomeMessageWithAudio],
         metadata: {
           duration: 0,
