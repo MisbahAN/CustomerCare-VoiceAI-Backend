@@ -578,12 +578,13 @@ router.post('/:conversationId/messages', async (req, res) => {
 2. Capture the main topic or issue
 3. Include the company name if relevant
 4. Be written in title case
+5. NEVER include quotation marks in the title
 
 Example formats:
-- "Netflix Login Issue"
-- "Amazon Refund Request"
-- "Pizza Hut Delivery Delay"
-- "Account Access Problem"`
+- Netflix Login Issue
+- Amazon Refund Request
+- Pizza Hut Delivery Delay
+- Account Access Problem`
           },
           {
             role: "user",
@@ -595,7 +596,8 @@ Example formats:
       });
 
       const title = titleResponse.choices[0]?.message?.content || conversation.title;
-      conversation.title = title;
+      // Remove any quotation marks that might be included
+      conversation.title = title.replace(/["']/g, '');
     }
 
     // Convert AI response to speech using OpenAI's TTS
@@ -706,18 +708,19 @@ async function generateConversationTitle(messages: any[]) {
         {
           role: "system",
           content: `Generate a concise, descriptive title for this customer service conversation. The title should:
-1. Focus on the main issue or resolution (e.g., "Password Reset Assistance", "Refund Request Processed")
+1. Focus on the main issue or resolution (e.g., Password Reset Assistance, Refund Request Processed)
 2. Be specific but brief (3-6 words)
 3. Use action-oriented words when applicable (Resolved, Processed, Updated, etc.)
 4. Include the service/product type if relevant
 5. Capture the outcome if the issue was resolved
+6. NEVER include quotation marks in the title
 
 Examples:
-- "Account Access Issue Resolved"
-- "Shipping Delay Compensation Provided"
-- "Product Return Label Generated"
-- "Subscription Cancellation Processed"
-- "Payment Method Update Completed"`
+- Account Access Issue Resolved
+- Shipping Delay Compensation Provided
+- Product Return Label Generated
+- Subscription Cancellation Processed
+- Payment Method Update Completed`
         },
         {
           role: "user",
@@ -728,7 +731,9 @@ Examples:
       max_tokens: 60
     });
 
-    return completion.choices[0]?.message?.content || 'Customer Service Conversation';
+    const title = completion.choices[0]?.message?.content || 'Customer Service Conversation';
+    // Remove any quotation marks that might be included
+    return title.replace(/["']/g, '');
   } catch (error) {
     console.error('Error generating title:', error);
     return 'Customer Service Conversation';

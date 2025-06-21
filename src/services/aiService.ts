@@ -208,12 +208,13 @@ const generateTitle = async (messages: IMessage[]): Promise<string> => {
           2. Capture the main topic or issue
           3. Include the company name if relevant
           4. Be written in title case
+          5. NEVER include quotation marks in the title
 
           Example formats:
-          - "Netflix Login Issue"
-          - "Amazon Refund Request"
-          - "Pizza Hut Delivery Delay"
-          - "Account Access Problem"`,
+          - Netflix Login Issue
+          - Amazon Refund Request
+          - Pizza Hut Delivery Delay
+          - Account Access Problem`,
         },
         {
           role: 'user',
@@ -224,7 +225,9 @@ const generateTitle = async (messages: IMessage[]): Promise<string> => {
       max_tokens: 60,
     });
 
-    return completion.choices[0].message?.content || 'New Conversation';
+    const title = completion.choices[0].message?.content || 'New Conversation';
+    // Remove any quotation marks that might be included
+    return title.replace(/["']/g, '');
   } catch (error) {
     console.error('Error generating title:', error);
     return 'New Conversation';
