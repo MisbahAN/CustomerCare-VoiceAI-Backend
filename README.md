@@ -2,18 +2,23 @@
 
 The Node.js backend for the CustomerCare-VoiceAI platform, providing AI-powered conversation APIs, real-time communication, user management services.
 
+## 🌐 Live Demo
+
+- **Frontend**: [https://customer-care-voice-ai-frontend.vercel.app/](https://customer-care-voice-ai-frontend.vercel.app/)
+- **Backend API**: [https://customercare-voiceai-backend.onrender.com](https://customercare-voiceai-backend.onrender.com)
+
 ## 🌟 Features
 
-- 🤖 **AI-Powered Conversations** – OpenAI GPT-4 integration for intelligent support agents
+- 🤖 **AI-Powered Conversations** – OpenAI GPT-3.5 Turbo integration for intelligent support agents
 - 💬 **Real-time Communication** – Socket.io for live chat functionality
 - 🎤 **Voice Communication** – LiveKit integration for voice calls
-- 📊 **Sentiment Analysis** – Automated conversation tone analysis
+- 🎵 **Text-to-Speech** – OpenAI TTS integration for voice responses
 - 🔐 **Secure Authentication** – JWT-based user authentication with bcrypt
-- 📈 **Analytics & Tracking** – Comprehensive conversation analytics
+- 📈 **Analytics & Tracking** – Basic conversation analytics and metadata
 - 🎯 **Agent Management** – Custom AI agent creation and configuration
-- 👤 **Avatar Management** – File upload system for agent profile pictures
+- 👤 **Avatar Management** – Static avatar images for agents
 - 🗄️ **Data Persistence** – MongoDB with Mongoose ODM
-- 📁 **Static File Serving** – Avatar images and uploaded content
+- 📁 **Static File Serving** – Avatar images and audio files
 
 ## ⚙️ Tech Stack
 
@@ -23,10 +28,10 @@ The Node.js backend for the CustomerCare-VoiceAI platform, providing AI-powered 
 | **Framework**      | Express.js                              |
 | **Database**       | MongoDB with Mongoose ODM               |
 | **Authentication** | JWT tokens with bcrypt password hashing |
-| **AI/ML**          | OpenAI GPT-4 API                        |
+| **AI/ML**          | OpenAI GPT-3.5 Turbo & TTS APIs        |
 | **Real-time**      | Socket.io, LiveKit                      |
-| **File Handling**  | Multer for file uploads                 |
-| **Testing**        | Jest with TypeScript                    |
+| **File Handling**  | Static file serving                     |
+| **Testing**        | Jest with TypeScript (configured)       |
 | **Development**    | Nodemon, ESLint, Prettier               |
 
 ## 🛠 Project Structure
@@ -35,57 +40,42 @@ The Node.js backend for the CustomerCare-VoiceAI platform, providing AI-powered 
 backend/
 ├── src/
 │   ├── models/               # MongoDB schemas
-│   │   ├── User.ts          # User authentication and profile
-│   │   ├── Agent.ts         # AI agent configuration with avatar support
-│   │   └── Conversation.ts  # Chat history and analytics
+│   │   ├── user.ts          # User authentication and profile
+│   │   ├── agent.ts         # AI agent configuration
+│   │   └── conversation.ts  # Chat history and analytics
 │   ├── routes/              # API endpoints
 │   │   ├── auth.ts          # Authentication routes
-│   │   ├── agents.ts        # Agent management with avatar upload
+│   │   ├── agents.ts        # Agent management routes
 │   │   ├── conversations.ts # Conversation management
 │   │   └── livekit.ts       # Voice call integration
 │   ├── services/            # Business logic
 │   │   ├── aiService.ts     # OpenAI integration
-│   │   └── livekitService.ts # LiveKit voice services
+│   │   └── livekit.ts       # LiveKit voice services
 │   ├── controllers/         # Route handlers
-│   │   ├── authController.ts
-│   │   ├── agentController.ts
 │   │   └── conversationController.ts
 │   ├── middleware/          # Express middleware
-│   │   ├── auth.ts          # JWT authentication
-│   │   ├── validation.ts    # Request validation
-│   │   ├── upload.ts        # File upload middleware
-│   │   └── errorHandler.ts  # Error handling
+│   │   └── auth.ts          # JWT authentication
 │   ├── config/              # Configuration files
-│   │   ├── database.ts      # MongoDB configuration
-│   │   ├── openai.ts        # OpenAI configuration
-│   │   ├── livekit.ts       # LiveKit configuration
-│   │   └── demoAgents.ts    # Demo agent configurations
+│   │   ├── demoAgent.ts     # Demo agent configuration
+│   │   └── livekit.ts       # LiveKit configuration
 │   ├── types/               # TypeScript definitions
-│   │   ├── auth.ts          # Authentication types
-│   │   ├── agent.ts         # Agent types
-│   │   ├── conversation.ts  # Conversation types
-│   │   └── api.ts           # API response types
-│   ├── utils/               # Utility functions
-│   │   ├── logger.ts        # Logging utilities
-│   │   ├── validation.ts    # Data validation
-│   │   ├── fileUtils.ts     # File handling utilities
-│   │   └── helpers.ts       # General helpers
-│   ├── socket/              # Socket.io handlers
-│   │   ├── chatHandler.ts   # Chat event handlers
-│   │   └── socketAuth.ts    # Socket authentication
-│   └── index.ts             # Server entry point
+│   │   └── livekit-server-sdk.d.ts # LiveKit type definitions
+│   ├── index.ts             # Main server entry point with Socket.io
+│   └── app.ts               # Alternative Express-only server setup
 ├── public/                  # Static files
-│   └── avatars/             # Agent avatar images (uploaded and default)
-│       ├── AI Avatar.png    # Default agent avatar
-├── uploads/                 # File upload directory
-├── tests/                   # Test files
-│   ├── auth.test.ts
-│   ├── agents.test.ts
-│   ├── conversations.test.ts
-│   └── upload.test.ts
+│   ├── audio/               # Generated audio files (temporary)
+│   │   └── *.mp3            # AI-generated speech audio
+│   └── avatars/             # Agent avatar images (static assets)
+│       ├── ai-avatar.png    # Default AI avatar
+│       ├── ai-avatar.svg    # SVG version
+│       └── *.png            # Company-specific avatars
+├── uploads/                 # File upload directory (placeholder)
+├── dist/                    # Compiled JavaScript output
+├── node_modules/            # Dependencies
+├── backend.log              # Application logs
+├── nodemon.json             # Nodemon configuration
 ├── package.json             # Dependencies and scripts
 ├── tsconfig.json            # TypeScript configuration
-├── .env.example             # Environment variables template
 └── README.md                # This file
 ```
 
@@ -157,13 +147,13 @@ lsof -ti:5001 | xargs kill -9  # Kill backend processes
    ALLOWED_FILE_TYPES=png,jpg,jpeg,gif
    ```
 
-4. **Create required directories**
+4. **Verify required directories exist**
 
    ```bash
-   # Create upload and avatar directories
-   mkdir -p public/avatars/uploads
-   mkdir -p uploads
-   chmod 755 public/avatars uploads
+   # Check if directories exist (should already be present)
+   ls -la public/avatars/
+   ls -la public/audio/
+   ls -la uploads/
    ```
 
 5. **Start MongoDB**
@@ -203,13 +193,11 @@ PUT  /api/auth/profile     # Update user profile
 
 ```typescript
 GET    /api/agents              # Get user's agents
-POST   /api/agents              # Create new agent (with avatar upload)
+POST   /api/agents              # Create new agent
 GET    /api/agents/:id          # Get specific agent
-PUT    /api/agents/:id          # Update agent (with avatar upload)
+PUT    /api/agents/:id          # Update agent
 DELETE /api/agents/:id          # Delete agent
 POST   /api/agents/:id/test     # Test agent response
-POST   /api/agents/:id/avatar   # Upload/update agent avatar
-DELETE /api/agents/:id/avatar   # Delete agent avatar
 ```
 
 ### Conversations
@@ -237,8 +225,8 @@ DELETE /api/livekit/room/:id # End voice room
 ### Static File Serving
 
 ```typescript
-GET /avatars/:filename       # Serve agent avatar images
-GET /uploads/:filename       # Serve uploaded files
+GET /public/avatars/:filename  # Serve agent avatar images
+GET /public/audio/:filename    # Serve generated audio files
 ```
 
 ## 🤖 AI Service Integration
@@ -263,49 +251,33 @@ interface Agent {
   company: string;
   personality: string;
   systemPrompt: string;
-  avatar?: string; // NEW: Avatar file path
   responseStyle: 'formal' | 'casual' | 'friendly' | 'professional';
   maxTokens: number;
   temperature: number;
   userId: ObjectId; // Owner of the agent
-  isDefault: boolean; // Whether it's a system default agent
 }
 ```
 
-### Avatar Management System
+### Static Avatar System
 
-The backend now includes a comprehensive avatar management system:
-
-```typescript
-interface AvatarUpload {
-  fieldname: string;
-  originalname: string;
-  encoding: string;
-  mimetype: string;
-  size: number;
-  destination: string;
-  filename: string;
-  path: string;
-}
-```
+The backend serves pre-built avatar images for agents:
 
 **Features:**
 
-- **File Upload**: Multer-based file upload with validation
-- **Image Processing**: Automatic image optimization and resizing
-- **File Type Validation**: Only allows image files (PNG, JPG, JPEG, GIF)
-- **Size Limits**: Configurable file size limits (default: 5MB)
-- **Path Management**: Organized file storage with unique naming
-- **Default Avatars**: Pre-built avatars for system agents
+- **Static Avatar Serving**: Serves avatar images from `public/avatars/`
+- **Company-Specific Avatars**: Pre-built avatars for different companies
+- **Default Avatars**: AI-generated avatars in PNG and SVG formats
+- **Optimized Delivery**: Direct static file serving for performance
 
 ### Conversation Flow
 
 1. **Message Received**: User sends message via Socket.io
-2. **Context Building**: System builds conversation context with agent avatar
-3. **AI Processing**: OpenAI processes message with agent personality
-4. **Response Generation**: AI generates appropriate response
-5. **Sentiment Analysis**: Analyzes conversation tone
-6. **Data Storage**: Saves conversation and analytics to MongoDB
+2. **Context Building**: System builds conversation context with agent configuration
+3. **AI Processing**: OpenAI GPT-3.5 Turbo processes message with agent personality
+4. **Response Generation**: AI generates appropriate text response
+5. **Text-to-Speech**: OpenAI TTS converts response to audio
+6. **Data Storage**: Saves conversation and metadata to MongoDB
+7. **Audio Streaming**: Streams base64-encoded audio back to client
 
 ## 🔐 Authentication & Security
 
@@ -319,13 +291,11 @@ interface AvatarUpload {
 ### Security Features
 
 - **Password Hashing**: bcrypt with salt rounds
-- **Input Validation**: Joi schema validation
-- **File Upload Security**: MIME type validation and size limits
-- **Path Traversal Protection**: Secure file path handling
-- **Rate Limiting**: Express rate limiting middleware
+- **Input Validation**: Request validation in routes
 - **CORS Configuration**: Proper cross-origin resource sharing
-- **Helmet**: Security headers for Express
 - **Environment Variables**: Secure configuration management
+- **JWT Token Protection**: Secure token-based authentication
+- **MongoDB Security**: Secure database connection and queries
 
 ## 📊 Database Schema
 
@@ -344,7 +314,7 @@ interface User {
 }
 ```
 
-### Agent Model (Updated)
+### Agent Model
 
 ```typescript
 interface Agent {
@@ -353,14 +323,12 @@ interface Agent {
   company: string;
   personality: string;
   systemPrompt: string;
-  avatar?: string; // NEW: Avatar file path
   responseStyle: string;
   settings: {
     maxTokens: number;
     temperature: number;
   };
   userId: ObjectId; // Owner of the agent
-  isDefault: boolean; // NEW: System default agent flag
   createdAt: Date;
   updatedAt: Date;
 }
@@ -431,45 +399,39 @@ JWT_EXPIRES_IN=7d                           # Token expiration
 
 # OpenAI
 OPENAI_API_KEY=your_openai_api_key_here     # OpenAI API key
-OPENAI_MODEL=gpt-4                          # OpenAI model to use
+OPENAI_MODEL=gpt-3.5-turbo                  # OpenAI model to use
 
 # LiveKit (Optional)
 LIVEKIT_API_KEY=your_livekit_api_key        # LiveKit API key
 LIVEKIT_API_SECRET=your_livekit_api_secret  # LiveKit API secret
 LIVEKIT_URL=wss://your-livekit-server.com   # LiveKit server URL
 
-# File Upload (NEW)
-MAX_FILE_SIZE=5MB                           # Maximum file upload size
-UPLOAD_PATH=./uploads                       # Upload directory path
-AVATAR_PATH=./public/avatars                # Avatar storage path
-ALLOWED_FILE_TYPES=png,jpg,jpeg,gif         # Allowed file types
+# Audio Configuration (Optional)
+AUDIO_PATH=./public/audio                   # Audio file storage path
 ```
 
 ### Code Standards
 
 - **TypeScript**: Strict type checking enabled
-- **ESLint**: Airbnb configuration with Node.js rules
+- **ESLint**: TypeScript ESLint configuration
 - **Prettier**: Consistent code formatting
-- **Jest**: Unit and integration testing
-- **Joi**: Input validation and sanitization
+- **Jest**: Testing framework (configured, tests pending)
+- **Validation**: Inline request validation in routes
 
 ### Testing
 
 ```bash
-# Run all tests
+# Jest is configured but no test files exist yet
 npm test
 
-# Run specific test file
+# Future: Run specific test file
 npm test -- auth.test.ts
 
-# Run tests with coverage
+# Future: Run tests with coverage
 npm run test:coverage
 
-# Run tests in watch mode
+# Future: Run tests in watch mode
 npm run test:watch
-
-# Test file upload functionality
-npm test -- upload.test.ts
 ```
 
 ## 🎤 Voice Communication
@@ -494,18 +456,17 @@ The backend integrates with LiveKit for real-time voice communication:
 
 ### Conversation Analytics
 
-- **Sentiment Analysis**: Real-time emotion detection
-- **Performance Metrics**: Response times and accuracy
-- **User Engagement**: Session duration and interaction quality
-- **Agent Performance**: Individual agent statistics
+- **Basic Metadata**: Conversation duration and message count
+- **Conversation Tracking**: Message history and timestamps
+- **User Engagement**: Session tracking and conversation flow
+- **Agent Performance**: Basic usage statistics
 
 ### Monitoring Features
 
-- **Health Checks**: API endpoint health monitoring
-- **Error Tracking**: Comprehensive error logging
-- **Performance Metrics**: Response time and throughput tracking
-- **Database Monitoring**: Connection and query performance
-- **File System Monitoring**: Upload directory health checks
+- **Health Checks**: `/health` API endpoint for server status
+- **Console Logging**: Basic error and info logging
+- **Database Monitoring**: MongoDB connection status
+- **Environment Monitoring**: Configuration validation
 
 ## 🐛 Troubleshooting
 
@@ -536,41 +497,30 @@ The backend integrates with LiveKit for real-time voice communication:
         https://api.openai.com/v1/usage
    ```
 
-3. **File Upload Issues**
+3. **Static File Serving Issues**
 
    ```bash
-   # Check upload directory permissions
-   ls -la uploads/ public/avatars/
+   # Check avatar directory
+   ls -la public/avatars/
 
-   # Create required directories
-   mkdir -p public/avatars/uploads uploads
-   chmod 755 public/avatars uploads
+   # Test avatar serving
+   curl -I http://localhost:5001/public/avatars/ai-avatar.png
 
-   # Check file size limits
-   ls -lah public/avatars/
+   # Check audio file serving
+   curl -I http://localhost:5001/public/audio/
    ```
 
-4. **Avatar Serving Issues**
-
-   ```bash
-   # Test avatar endpoint
-   curl -I http://localhost:5001/avatars/netflix.png
-
-   # Check static file middleware
-   curl -I http://localhost:5001/uploads/test-file.jpg
-   ```
-
-5. **JWT Token Issues**
+4. **JWT Token Issues**
 
    ```bash
    # Verify JWT secret is set
    echo $JWT_SECRET
 
-   # Test token generation
-   npm run test -- auth.test.ts
+   # Check token in requests
+   curl -H "Authorization: Bearer <token>" http://localhost:5001/api/auth/profile
    ```
 
-6. **LiveKit Connection Problems**
+5. **LiveKit Connection Problems**
 
    ```bash
    # Test LiveKit credentials
@@ -579,13 +529,23 @@ The backend integrates with LiveKit for real-time voice communication:
         $LIVEKIT_URL/twirp/livekit.RoomService/ListRooms
    ```
 
+6. **Socket.io Connection Issues**
+
+   ```bash
+   # Check if Socket.io is working
+   curl -X GET http://localhost:5001/socket.io/
+
+   # Verify CORS configuration
+   curl -H "Origin: http://localhost:3000" http://localhost:5001/health
+   ```
+
 ### Debugging
 
-- **Logging**: Comprehensive logging with Winston
-- **Debug Mode**: Enable with `DEBUG=app:*`
-- **Error Handling**: Centralized error handling middleware
-- **API Testing**: Postman collection for API testing
-- **File Upload Testing**: Dedicated upload endpoint testing
+- **Logging**: Console-based logging for errors and info
+- **Debug Mode**: Enable with `NODE_ENV=development`
+- **Error Handling**: Basic try-catch blocks with Socket.io error events
+- **API Testing**: Test endpoints with curl or Postman
+- **Socket.io Testing**: Use browser developer tools for real-time debugging
 
 ## 🔄 Deployment
 
@@ -608,8 +568,7 @@ PORT=5001
 MONGODB_URI=mongodb://your-production-db
 JWT_SECRET=your-production-jwt-secret
 OPENAI_API_KEY=your-production-openai-key
-MAX_FILE_SIZE=5MB
-AVATAR_PATH=./public/avatars
+AUDIO_PATH=./public/audio
 ```
 
 ### Docker Deployment
@@ -629,11 +588,11 @@ COPY dist ./dist
 # Copy static assets
 COPY public ./public
 
-# Create upload directories
-RUN mkdir -p uploads public/avatars/uploads
+# Create required directories
+RUN mkdir -p uploads public/avatars public/audio
 
 # Set permissions
-RUN chmod 755 uploads public/avatars
+RUN chmod 755 uploads public/avatars public/audio
 
 EXPOSE 5001
 
