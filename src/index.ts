@@ -26,7 +26,12 @@ const server = http.createServer(app);
 
 // Configure CORS
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:3001', 
+    'https://customer-care-voice-ai-frontend.vercel.app',
+    process.env.FRONTEND_URL
+  ].filter((url): url is string => typeof url === 'string' && url.length > 0),
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
 };
@@ -37,7 +42,12 @@ app.use(express.json());
 // Configure socket.io with CORS
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:3001', 
+      'https://customer-care-voice-ai-frontend.vercel.app',
+      process.env.FRONTEND_URL
+    ].filter((url): url is string => typeof url === 'string' && url.length > 0),
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -45,6 +55,11 @@ const io = new Server(server, {
 
 // Serve static files
 app.use('/audio', express.static(path.join(__dirname, '..', 'public', 'audio')));
+
+// Health check route
+app.get('/health', (_, res) => {
+  res.status(200).json({ status: 'OK', message: 'Server is running', timestamp: new Date().toISOString() });
+});
 
 // Use routes
 app.use('/api/conversations', conversationRoutes);
