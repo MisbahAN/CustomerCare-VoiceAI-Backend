@@ -66,7 +66,7 @@ app.use((err: any, _: express.Request, res: express.Response, __: express.NextFu
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-const PORT = process.env.PORT || 5001;
+const PORT = parseInt(process.env.PORT || '5001', 10);
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
   console.log('Health endpoint available at /health');
