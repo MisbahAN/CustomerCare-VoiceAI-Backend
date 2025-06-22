@@ -7,6 +7,14 @@ An intelligent Node.js backend that powers automated customer service interactio
 - **Frontend**: [https://customer-care-voice-ai-frontend.vercel.app/](https://customer-care-voice-ai-frontend.vercel.app/)
 - **Backend API**: [https://customercare-voiceai-backend.onrender.com](https://customercare-voiceai-backend.onrender.com)
 
+## 📺 Watch Demo
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=ySONdY_z_80" target="_blank">
+    <img src="https://img.youtube.com/vi/ySONdY_z_80/0.jpg" alt="Watch Demo" width="560"/>
+  </a>
+</p>
+
 ## 🎯 What This Project Does
 
 CustomerCare-VoiceAI is a comprehensive automated customer service platform that handles customer inquiries through intelligent AI agents. The backend autonomously:
